@@ -142,3 +142,39 @@ export const ProductsSkeleton = {
         </div>
     ),
 };
+
+interface CartLoaderProps {
+    itemsCount?: number;
+    orderItemsCount?: number;
+}
+
+export function CartLoader({ itemsCount = 4 }: CartLoaderProps) {
+    return (
+        <div className="wrap mt-6 md:mt-8 mb-10 grid gap-6 grid-cols-1 md:grid-cols-12 px-3 lg:px-0">
+            <div className="flex flex-col md:col-span-8">
+                <Skeleton className="h-10 w-48 mb-6" />
+
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between items-start gap-3 md:gap-0 mb-6">
+                    <Skeleton className="h-9 w-44" />
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="h-9 w-28" />
+                        <Skeleton className="h-9 w-44" />
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {Array.from({ length: itemsCount }).map((_, index) => (
+                        <Skeleton key={index} className="h-30 w-full" />
+                    ))}
+                </div>
+
+            </div>
+
+            <div className="md:col-span-4 flex flex-col gap-4">
+                <Skeleton className="h-30 w-full rounded-md" />
+                <Skeleton className="h-50 w-full rounded-md" />
+            </div>
+        </div>
+    );
+}
+

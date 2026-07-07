@@ -2,6 +2,7 @@ import configPromise from '@payload-config';
 import { getPayload } from 'payload';
 
 import { PAGES } from '@/config/public-pages.config';
+import { createSale } from '@/server-actions/createSale';
 import { COLLECTION_SLUGS, HTTP_METHODS } from '@/shared/constants/constants';
 import { ORDER_STATUS } from '@/shared/constants/order.constants';
 import { PAYMENT_STATUS } from '@/shared/constants/payment.constants';
@@ -124,9 +125,6 @@ export class OrderServerService extends BaseServerService {
 
         if (order.paymentStatus === paymentStatus) return;
 
-        // Здесь мы меняем только paymentStatus, а хук коллекции Orders обновит статус заказа (Status)
-        // Источник правды - PaymentStatus
-
         await payload.update({
             collection: COLLECTION_SLUGS.ORDERS,
             id: orderId,
@@ -139,6 +137,28 @@ export class OrderServerService extends BaseServerService {
         if (paymentStatus === PAYMENT_STATUS.CANCELED && order.paymentStatus !== PAYMENT_STATUS.CANCELED) {
             await this.adjustStock(order.items, STOCK_ADJUSTMENT.INCREMENT);
         }
+
+        if (paymentStatus === PAYMENT_STATUS.WAITING_FOR_CAPTURE) {
+            const saleResult = await createSale(order);
+            if (!saleResult.success) {
+                if (saleResult.type === 'business') {
+                    throw new Error(`Ошибка 1С: ${saleResult.error}`);
+                }
+
+                throw new Error(`Техническая ошибка интеграции с 1С: ${saleResult.error}`);
+            }
+
+            await payload.update({
+                collection: COLLECTION_SLUGS.ORDERS,
+                id: orderId,
+                data: {
+                    saleDocumentNumber: saleResult.documentNumber,
+                },
+            });
+        }
+
+        // Здесь мы меняем только paymentStatus, а хук коллекции Orders обновит статус заказа (Status)
+        // Источник правды - PaymentStatus
     }
 
     private async createOrderInDb(orderData: IOrderCreatePayloadData): Promise<Order> {

@@ -11,7 +11,7 @@ export abstract class BaseServerService {
         const origin = headersList.get('origin') || '';
         const referer = headersList.get('referer') || '';
 
-        console.log('headers', origin, referer);
+        //console.log('headers', origin, referer);
 
         const authHeaders: Record<string, string> = {
             'Content-Type': 'application/json',

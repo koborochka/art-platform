@@ -17,6 +17,7 @@ interface CartState {
     clear: () => void;
     clearCheckedItems: () => void;
     toggleAll: (checked: boolean) => void;
+    syncWithStock: (stockMap: Record<number, number>) => void;
 }
 
 export const useCartStore = create<CartState>()(
@@ -109,6 +110,27 @@ export const useCartStore = create<CartState>()(
                     };
                 });
             },
+            syncWithStock: (stockMap) =>
+                set((state) => {
+                    if (!state.cart?.items) return state;
+
+                    const newItems = state.cart.items
+                        .map((item) => {
+                            const id = isProductData(item.product) ? item.product.id : item.product;
+
+                            // нет данных о товаре — не трогаем, ждём отдельного подтверждения (404 -> invalidIds)
+                            if (!(id in stockMap)) return item;
+
+                            const available = stockMap[id];
+
+                            if (available !== undefined && item.quantity > available || available === 0) return { ...item, quantity: available };
+
+                            return item;
+                        })
+                        .filter(Boolean) as Cart['items'];
+
+                    return { cart: { ...state.cart, items: newItems } };
+                }),
         }),
         { name: 'cart-storage' },
     ),

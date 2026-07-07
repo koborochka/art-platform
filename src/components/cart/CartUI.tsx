@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 
 import { Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,7 @@ import type { ICartItem } from '@/shared/types/cart.interface';
 import type { Product } from '@/shared/types/payload-types';
 import { cn } from '@/shared/utils/tailwind';
 
+import { CartLoader } from '../shared/Skeleton';
 import { Checkbox } from '../ui/checkbox';
 
 interface ICartUIProps {
@@ -24,7 +25,7 @@ interface ICartUIProps {
 
 export default function CartUI({ isUserAuthorized }: ICartUIProps) {
     const router = useRouter();
-    const { cart, removeItem, toggleAll, clearCheckedItems } = useCartStore();
+    const { cart, removeItem, toggleAll, clearCheckedItems, syncWithStock } = useCartStore();
 
     const items = cart?.items ?? [];
 
@@ -32,16 +33,20 @@ export default function CartUI({ isUserAuthorized }: ICartUIProps) {
         return items.map((item) => (isProductData(item.product) ? item.product.id : item.product));
     }, [items]);
 
-    const { data: products, isLoading, isError, error, invalidIds } = useProductsByIds(productsIds);
+    const { data: products, isLoading, isError, error, dataUpdatedAt } = useProductsByIds(productsIds);
 
-    if (isLoading) return <div className="wrap mt-8 text-2xl font-semibold">Загрузка...</div>;
+    useEffect(() => {
+        if (isLoading || !products) return;
+        if (products.length < productsIds.length) return; 
+
+        const stockMap = Object.fromEntries(products.map((p) => [p.id, p.quantity ?? 0]));
+        syncWithStock(stockMap);
+    }, [dataUpdatedAt]);
+
+    if (isLoading) return <CartLoader />;
 
     if (isError && !error?.message.includes('404 Not Found')) {
         return <div className="wrap mt-8">Ошибка: {error?.message}</div>;
-    }
-
-    if (invalidIds && invalidIds.length > 0) {
-        invalidIds.forEach((id) => removeItem(id));
     }
 
     const allItems = items
@@ -53,7 +58,15 @@ export default function CartUI({ isUserAuthorized }: ICartUIProps) {
         })
         .filter(Boolean) as (ICartItem & { product: Product })[];
 
-    if (allItems.length === 0) return <p className="wrap mt-8 text-xl font-semibold">Корзина пуста</p>;
+    if (allItems.length === 0)
+        return (
+            <div className="text-center py-8">
+                <p className="text-xl">У вас нет товаров в корзине.</p>
+                <Button onClick={() => router.push(PAGES.PRODUCTS)} className="mt-4">
+                    Перейти к покупкам
+                </Button>
+            </div>
+        );
 
     const availableItems = allItems.filter((item) => (item.product.quantity ?? 0) > 0);
     const unavailableItems = allItems.filter((item) => (item.product.quantity ?? 0) <= 0);
@@ -88,13 +101,17 @@ export default function CartUI({ isUserAuthorized }: ICartUIProps) {
                             <div className="flex gap-3 md:gap-6 items-center flex-wrap">
                                 <div
                                     className={cn(
-                                        'flex gap-2 items-center cursor-pointer select-none transition-colors duration-200',
+                                        'flex items-center cursor-pointer select-none transition-colors duration-200',
                                         isAllChecked ? 'text-my-accent' : 'text-my-primary',
                                     )}
-                                    onClick={() => toggleAll(!isAllChecked)}
                                 >
-                                    <Checkbox checked={isAllChecked} onCheckedChange={() => {}} />
-                                    <span className="font-medium text-sm md:text-base">Выбрать все</span>
+                                    <Checkbox checked={isAllChecked} onCheckedChange={() => toggleAll(!isAllChecked)} />
+                                    <span
+                                        className="font-medium text-sm md:text-base pl-2"
+                                        onClick={() => toggleAll(!isAllChecked)}
+                                    >
+                                        Выбрать все
+                                    </span>
                                 </div>
                                 <Button
                                     className="font-semibold flex gap-2 text-sm md:text-base"

@@ -6,8 +6,10 @@ import path from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 
+import { enrichNewProductsDiff } from '@/shared/utils/enrichNewProductsDiff';
 import {
     type ChangedOfferType,
+    type ChangedParsedOffers,
     getChangedDetailed,
     type ParsedOffer,
     parseOffersXml,
@@ -80,109 +82,68 @@ export async function POST(req: NextRequest) {
 
     const filePath = path.join(dir, filename);
 
-    if (mode === 'test') {
-        try {
-            const xml = await req.text();
-
-            if (!xml || xml.length < 10) {
-                return NextResponse.json({ error: 'empty xml' }, { status: 400 });
-            }
-
-            // 1. парсим XML
-            const parsed = parseOffersXml(xml);
-
-            // базовый путь (без расширения)
-            const basePath = filePath.replace(/\.xml$/i, '');
-
-            const newPath = `${basePath}_new.json`;
-            const oldPath = `${basePath}_old.json`;
-            const diffPath = `${basePath}_diff.json`;
-
-            // 2. сохраняем new
-            writeFileSync(newPath, JSON.stringify(parsed, null, 2), 'utf8');
-
-            console.log(`Saved NEW: ${newPath}`);
-
-            let diff = [];
-
-            // 3. если есть old считаем diff
-            if (fs.existsSync(oldPath)) {
-                const oldRaw = fs.readFileSync(oldPath, 'utf8');
-                const oldData = JSON.parse(oldRaw);
-
-                diff = getChangedDetailed(oldData, parsed);
-
-                // 4. сохраняем diff
-                writeFileSync(diffPath, JSON.stringify(diff, null, 2), 'utf8');
-
-                console.log(`Diff computed: ${diff.length} changes → ${diffPath}`);
-
-                // 5. удаляем old
-                fs.unlinkSync(oldPath);
-            } else {
-                console.log('OLD not found → считаем все товары новыми');
-
-                diff = parsed.map((item) => ({
-                    id: item.id,
-                    type: 'new' as ChangedOfferType,
-                }));
-
-                writeFileSync(diffPath, JSON.stringify(diff, null, 2), 'utf8');
-            }
-            // diff = [
-            //     { id: '000004825', type: 'stock' as ChangedOfferType, newValue: 3 },
-            //     { id: '000002604', type: 'stock' as ChangedOfferType, newValue: 4 },
-            //     { id: '000002029', type: 'deleted' as ChangedOfferType },
-            // ];
-
-            await syncProductsFromDiff(diff);
-
-            // 6. переименовываем new → old
-            fs.renameSync(newPath, oldPath);
-
-            return new NextResponse('success');
-        } catch (err: unknown) {
-            return NextResponse.json({ error: err instanceof Error ? err.message : 'unknown error' }, { status: 500 });
-        }
-    }
-
     if (mode === 'file') {
+        console.log('file chunk, size will be:', req.headers.get('content-length'));
+
         const writeStream = createWriteStream(filePath, {
             flags: 'a',
         });
-
         await pipeline(req.body as unknown as Readable, writeStream);
 
         return new NextResponse('success');
-    }
+    }  
 
     if (mode === 'import') {
-        if (!fs.existsSync(filePath)) {
-            return new NextResponse('failure');
-        }
+        await runImport(path.join(dir, filename));
 
-        try {
-            // 1. читаем XML
-            const xml = fs.readFileSync(filePath, 'utf8');
-
-            // 2. парсим
-            const parsed = parseOffersXml(xml);
-
-            // 3. формируем путь JSON рядом с XML
-            const jsonPath = filePath.replace(/\.xml$/i, '.json');
-
-            // 4. сохраняем
-            writeFileSync(jsonPath, JSON.stringify(parsed, null, 2), 'utf8');
-
-            console.log(`Parsed ${parsed.length} offers → ${jsonPath}`);
-
-            // (опционально) удалить XML
-            // fs.unlinkSync(filePath);
-        } catch (err: unknown) {
-            return NextResponse.json({ error: err instanceof Error ? err.message : 'unknown error' }, { status: 500 });
-        }
         return new NextResponse('success');
     }
 
     return NextResponse.json({ error: 'unknown mode' }, { status: 400 });
 }
+
+async function runImport(filePath: string) {
+    const xml = fs.readFileSync(filePath, 'utf8');
+    if (!xml || xml.length < 10) throw new Error('empty xml');
+
+    const parsed = parseOffersXml(xml);
+  // удаляем XML сразу после парсинга — больше не нужен
+    fs.unlinkSync(filePath);
+
+    const basePath = filePath.replace(/\.xml$/i, '');
+    const newPath = `${basePath}_new.json`;
+    const oldPath = `${basePath}_old.json`;
+    const diffPath = `${basePath}_diff.json`;
+
+    writeFileSync(newPath, JSON.stringify(parsed, null, 2), 'utf8');
+
+    let diff: ChangedParsedOffers[] = [];
+
+    if (fs.existsSync(oldPath)) {
+        const oldData = JSON.parse(fs.readFileSync(oldPath, 'utf8'));
+        let changedDetailed = getChangedDetailed(oldData, parsed);
+        diff = await enrichNewProductsDiff(changedDetailed, parsed);
+        writeFileSync(diffPath, JSON.stringify(diff, null, 2), 'utf8');
+        fs.unlinkSync(oldPath);
+    } else {
+        diff = parsed.map((item) => ({ id: item.id, type: 'new' as ChangedOfferType }));
+        writeFileSync(diffPath, JSON.stringify(diff, null, 2), 'utf8');
+    }
+
+    await syncProductsFromDiff(diff);
+
+    fs.renameSync(newPath, oldPath);
+}
+
+// пайплан не работает. верно определяет айдишники но не видоизменяет.
+
+// file chunk, size will be: 3581220
+//  POST /api/1c-exchange?mode=file 200 in 349ms
+// === SYNC PRODUCTS START ===
+// ⚠ not found for update: 000009028
+// ⚠ not found for update: 000009077
+// ⚠ not found for update: 000009079
+// ⚠ not found for update: 000009084
+// ⚠ not found for delete: 000009085
+// === SYNC DONE ===
+//  POST /api/1c-exchange?mode=import 200 in 712ms

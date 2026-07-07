@@ -32,18 +32,13 @@ export default function CartItem({ item, available }: { item: ICartItem; availab
 
     return (
         <Card className="flex w-full p-0 overflow-hidden flex-col md:flex-row md:items-center md:gap-4">
-            {/* Mobile uses this wrapper as a flex row (image + content).
-                On desktop it becomes display:contents so children participate
-                in Card's md:flex-row directly — preserving the original layout. */}
             <div className="flex flex-row items-center w-full gap-3 p-3 md:contents">
-                {/* Image (общая для обоих лейаутов) */}
                 <div className="relative shrink-0 w-20 h-20 md:w-30 md:h-30">
                     <Link href={PAGES.PRODUCT(product.slug)}>
                         <Image src={imageSrc} alt={product.title} fill className="object-cover rounded-lg" />
                     </Link>
                 </div>
 
-                {/* MOBILE: правая колонка */}
                 <div className="flex md:hidden flex-col flex-1 min-w-0 gap-1.5">
                     {available ? (
                         <div className="flex items-baseline gap-2 flex-wrap">
@@ -68,13 +63,12 @@ export default function CartItem({ item, available }: { item: ICartItem; availab
                             <div className="flex items-center justify-between gap-2 mt-1">
                                 <div
                                     className={cn(
-                                        'flex items-center gap-2 cursor-pointer select-none transition-colors',
+                                        'flex items-center cursor-pointer select-none transition-colors',
                                         item.checked ? 'text-my-accent' : 'text-my-primary',
                                     )}
-                                    onClick={() => toggleChecked(productId)}
                                 >
-                                    <Checkbox checked={item.checked ?? false} onCheckedChange={() => {}} />
-                                    <span className="text-sm font-medium">Выбрать</span>
+                                    <Checkbox checked={item.checked ?? false} onCheckedChange={() => toggleChecked(productId)} />
+                                    <span className="text-sm font-medium pl-2" onClick={() => toggleChecked(productId)}>Выбрать</span>
                                 </div>
                                 <CounterButton
                                     variant="secondary"
@@ -88,7 +82,6 @@ export default function CartItem({ item, available }: { item: ICartItem; availab
                     )}
                 </div>
 
-                {/* DESKTOP: оригинальная сетка, без изменений */}
                 <div className="hidden md:grid grid-cols-4 md:grid-cols-3 flex-row h-full w-full p-4 gap-6">
                     <div className="col-span-2 md:col-span-1 flex flex-col flex-1 gap-4 justify-between">
                         <Link href={PAGES.PRODUCT(product.slug)}>
@@ -99,13 +92,12 @@ export default function CartItem({ item, available }: { item: ICartItem; availab
                         {available && (
                             <div
                                 className={cn(
-                                    'flex items-center gap-2 cursor-pointer select-none transition-colors',
+                                    'flex items-center cursor-pointer select-none transition-colors',
                                     item.checked ? 'text-my-accent' : 'text-my-primary',
                                 )}
-                                onClick={() => toggleChecked(productId)}
                             >
-                                <Checkbox checked={item.checked ?? false} onCheckedChange={() => {}} />
-                                <span className="text-sm font-medium">Выбрать</span>
+                                <Checkbox checked={item.checked ?? false} onCheckedChange={() => toggleChecked(productId)} />
+                                <span className="text-sm font-medium pl-2" onClick={() => toggleChecked(productId)}>Выбрать</span>
                             </div>
                         )}
                     </div>
@@ -140,7 +132,6 @@ export default function CartItem({ item, available }: { item: ICartItem; availab
                 </div>
             </div>
 
-            {/* MOBILE-only: «Нет в наличии» во всю ширину карточки внизу */}
             {!available && (
                 <Button className="md:hidden w-full rounded-none" variant={'pagination'} disabled>
                     Нет в наличии

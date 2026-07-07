@@ -149,7 +149,6 @@ export const ProductsCollection: CollectionConfig = {
             name: 'article1C',
             type: 'text',
             label: 'Артикул 1С',
-            // defaultValue: '000001', // TODO: удалить дефолт, когда 1С будет передавать артикулы
             admin: {
                 readOnly: true,
             },

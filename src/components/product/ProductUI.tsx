@@ -54,7 +54,7 @@ export default function ProductUI({ initialParams }: { initialParams: ProductQue
                         <h2 className="font-semibold text-2xl md:text-[28px] lg:text-[32px] leading-tight">{title}</h2>
 
                         <div className="flex flex-col gap-2">
-                            {productInCart ? (
+                            {productInCart && isAvailable ? (
                                 <CounterButton
                                     quantity={productInCart.quantity}
                                     boundary={quantity || 0}
