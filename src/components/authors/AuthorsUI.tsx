@@ -61,7 +61,7 @@ export default function AuthorsUI({ initialParams }: { initialParams: AuthorsQue
                 </div>
 
                 {authors.length === 0 ? (
-                    <div>Авторов не найдено.</div>
+                    <div className="text-xl md:text-2xl font-semibold text-center mt-8">Авторов не найдено.</div>
                 ) : (
                     <div className="flex gap-2 justify-center items-center mt-8">
                         <Button

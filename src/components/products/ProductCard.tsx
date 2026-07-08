@@ -96,7 +96,7 @@ export default function ProductCard({
                             />
                         ) : (
                             <Button
-                                className="w-full rounded text-xs md:text-sm"
+                                className="w-full text-xs md:text-sm"
                                 variant="secondary"
                                 onClick={() => addItem(id)}
                                 disabled={!isAvailable}

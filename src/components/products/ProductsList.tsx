@@ -29,7 +29,7 @@ export default function ProductsList({ initialParams, updateQueryParams }: Produ
 
     if (isError) return <div>Error: {error.message}</div>;
     if (isFetching) return <ProductsGridLoader productsCount={16} columnsCount={4} />;
-    if (!products) return <div>Products not found</div>;
+    if (!products) return  <div className="text-xl md:text-2xl font-semibold text-center mt-8">Товаров не найдено.</div>;
 
     const { hasNextPage = false, hasPrevPage = false, prevPage, nextPage, totalPages = 1 } = data;
 

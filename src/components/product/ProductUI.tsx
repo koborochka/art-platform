@@ -64,7 +64,7 @@ export default function ProductUI({ initialParams }: { initialParams: ProductQue
                                 />
                             ) : (
                                 <Button
-                                    className="w-full rounded cursor-pointer"
+                                    className="w-full"
                                     variant="secondary"
                                     onClick={() => addItem(id)}
                                     disabled={!isAvailable}
@@ -72,7 +72,7 @@ export default function ProductUI({ initialParams }: { initialParams: ProductQue
                                     {isAvailable ? `${price} ₽` : 'Ждём поступления!'}
                                 </Button>
                             )}
-                            {!!quantity && quantity > 0 && (
+                            {isAvailable && (
                                 <span className="text-my-accent font-[450] text-sm md:text-base">
                                     В наличии {quantity} шт
                                 </span>

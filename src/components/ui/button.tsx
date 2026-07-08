@@ -60,11 +60,10 @@ function Button({
     return <Comp data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
 }
 
-const counterVariants = cva('flex p-0.5 w-full gap-1 items-center justify-between rounded-md', {
+const counterVariants = cva('flex w-full gap-1 items-center justify-between rounded-md h-9 min-h-10', {
     variants: {
         variant: {
             default: 'text-white bg-my-button-primary-default',
-
             secondary: 'text-my-accent bg-my-secondary-background',
         },
     },
