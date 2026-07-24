@@ -1,3 +1,4 @@
+import { createNomenclature1C } from '@/server-actions/createNomenclature';
 import { COLLECTION_SLUGS, HTTP_METHODS } from '@/shared/constants/constants';
 import { isProductData } from '@/shared/guards/product.guard';
 import type { IMediaResult, IOperationResult, IProductResult } from '@/shared/types/api.interface';
@@ -55,11 +56,33 @@ export class AuthorClientService {
         return { success: true };
     }
 
-    async createProduct(productData: IProductFormData): Promise<IProductResult> {
+    async createProduct(productData: IProductFormData, authorId: number): Promise<IProductResult> {
+        if (!productData.category) {
+            return { success: false, error: 'Не указана категория товара' };
+        }
+
+        const nomenclatureResult = await createNomenclature1C({
+            authorId: authorId,
+            categoryId: productData.category as number,
+            productName: productData.title,
+        });
+
+        if (!nomenclatureResult.success || !nomenclatureResult.article) {
+            return {
+                success: false,
+                error: nomenclatureResult.error ?? 'Не удалось создать номенклатуру в 1С',
+            };
+        }
+
+        const payloadWithArticle: IProductFormData = {
+            ...productData,
+            article1C: nomenclatureResult.article,
+        };
+
         const response = await fetch(apiUrl.author.products(), {
             method: HTTP_METHODS.POST,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(productData),
+            body: JSON.stringify(payloadWithArticle),
         });
 
         const data = await response.json();

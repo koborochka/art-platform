@@ -174,7 +174,7 @@ export default function AuthorProfileUI({
             const isCreateMode = !modalProduct;
 
             const result = isCreateMode
-                ? await authorClientService.createProduct(payloadData)
+                ? await authorClientService.createProduct(payloadData, authorData.id)
                 : await authorClientService.updateProduct(modalProduct!.id, payloadData);
 
             if (result.success && result.product) {

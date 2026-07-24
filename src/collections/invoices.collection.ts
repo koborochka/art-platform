@@ -1,5 +1,6 @@
 import { type CollectionConfig } from 'payload';
 
+import { createConsignmentReceipt1C } from '@/server-actions/createConsignmentReceipt';
 import { COLLECTION_SLUGS } from '@/shared/constants/constants';
 import { isProductData } from '@/shared/guards/product.guard';
 import { INVOICE_ITEM_CONDITION } from '@/shared/types/invoice.interface';
@@ -41,6 +42,9 @@ export const InvoicesCollection: CollectionConfig = {
             type: 'checkbox',
             label: 'Подтвердить получение товаров',
             defaultValue: false,
+            access: {
+                update: ({ req: { user } }) => isAdmin(user),
+            },
             admin: {
                 position: 'sidebar',
                 description: 'При установке галочки цена и количество товаров будут отображены на сайте',
@@ -114,35 +118,34 @@ export const InvoicesCollection: CollectionConfig = {
     hooks: {
         afterChange: [
             async ({ doc, previousDoc, req, operation }) => {
-                // Обработка синхронизации данных товаров и накладной после нажатия isConfirmed
+                // Обработка после подтверждения накладной
+                // количество обновляется со следующей выгрузкой
                 if (isUpdateOperation(operation) && doc.isConfirmed && !previousDoc.isConfirmed) {
-                    for (const item of doc.items) {
-                        const productId = isProductData(item.product) ? item.product.id : item.product;
+                    const receiptItems = await Promise.all(
+                        doc.items.map(async (item: (typeof doc.items)[number]) => {
+                            const productId = isProductData(item.product) ? item.product.id : item.product;
 
-                        try {
                             const product = await req.payload.findByID({
                                 collection: COLLECTION_SLUGS.PRODUCTS,
                                 id: productId,
                                 req,
                             });
 
-                            let newQuantity = product.quantity || 0;
-                            if (item.condition !== INVOICE_ITEM_CONDITION.REVALUATION) {
-                                newQuantity += item.quantity || 0;
-                            }
+                            return {
+                                article1C: product.article1C,
+                                quantity: item.quantity,
+                                price: item.price,
+                            };
+                        }),
+                    );
 
-                            await req.payload.update({
-                                collection: COLLECTION_SLUGS.PRODUCTS,
-                                id: productId,
-                                data: {
-                                    price: item.price,
-                                    quantity: newQuantity,
-                                },
-                                req,
-                            });
-                        } catch (error) {
-                            console.error(`Ошибка синхронизации товара ${productId}:`, error);
-                        }
+                    const result = await createConsignmentReceipt1C({
+                        authorId: typeof doc.author === 'object' ? doc.author.id : doc.author,
+                        items: receiptItems,
+                    });
+
+                    if (!result.success) {
+                        throw new Error(result.error ?? 'Не удалось создать поступление в 1С');
                     }
                 }
                 return doc;

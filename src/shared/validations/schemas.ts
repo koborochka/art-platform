@@ -29,7 +29,7 @@ const mediaSchema = z
 export const productSchema = z.object({
     title: z.string().min(1, 'Введите название товара'),
     description: z.string().optional().nullable(),
-    category: z.union([z.number(), z.string()]).optional().nullable(),
+    category: z.union([z.number(), z.string()]), // категория обязательна для 1с
     gallery: z.array(
         z.object({
             id: z.string().nullable().optional(),
