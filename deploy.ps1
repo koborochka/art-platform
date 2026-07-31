@@ -3,7 +3,7 @@
 $ErrorActionPreference = "Stop"
 
 # Конфиг
-$SshHost = "80.87.102.60"
+$SshHost = "185.93.111.64"
 $SshUser = "artuser"
 $ArchiveName = "deploy.tar.gz"
 

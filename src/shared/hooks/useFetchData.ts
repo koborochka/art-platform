@@ -77,23 +77,23 @@ export const useProductsByIds = (ids: number[]) => {
 
     const products = queries.map((q) => q.data).filter(Boolean) as Product[];
 
-    // const invalidIds: number[] = queries
-    //     .map((q, index) => {
-    //         const id = ids[index];
+    const invalidIds: number[] = queries
+        .map((q, index) => {
+            const id = ids[index];
 
-    //         if (q.isError) return id;
-    //         if (!q.isLoading && !q.data) return id;
+            if (q.isError) return id;
+            if (!q.isLoading && !q.data) return id;
 
-    //         return null;
-    //     })
-    //     .filter((id): id is number => id !== null);
+            return null;
+        })
+        .filter((id): id is number => id !== null);
 
     return {
         data: products,
         isLoading,
         isError,
         error,
-     //   invalidIds,
+        invalidIds,
         dataUpdatedAt: queries.map((q) => q.dataUpdatedAt).join(','),
     };
 };

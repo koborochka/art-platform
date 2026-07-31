@@ -16,6 +16,12 @@ export function HomeLoader() {
     );
 }
 
+export function LoginLoader() {
+    return (
+        <Skeleton className="max-w-lg w-full mx-auto h-128" />
+    );
+}
+
 export function ProductsLoader({ showHeader = true, productsCount = 12, columnsCount = 4 }: ProductsLoaderProps) {
     return (
         <div className="wrap">

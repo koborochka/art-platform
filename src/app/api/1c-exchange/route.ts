@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-import { XMLParser } from 'fast-xml-parser';
 import fs, { createWriteStream, writeFileSync } from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
@@ -37,6 +36,7 @@ function checkAuth(req: NextRequest) {
 export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const mode = url.searchParams.get('mode');
+    console.log('GET mode = ' + mode);
 
     if (mode === 'checkauth') {
         if (!checkAuth(req)) {
@@ -60,10 +60,26 @@ ${sessionId}`,
     }
 
     if (mode === 'init') {
-        return new NextResponse(
-            `zip=no
-file_limit=2000000`,
-        );
+        const dir = path.join(process.cwd(), '1c_uploads');
+        fs.readdirSync(dir)
+            .filter((f) => f.toLowerCase().endsWith('.xml'))
+            .forEach((f) => {
+                console.log(`[init] removing stale xml from previous session: ${f}`);
+                fs.unlinkSync(path.join(dir, f));
+            });
+
+        return new NextResponse(`zip=no\nfile_limit=2000000`);
+    }
+
+    if (mode === 'import') {
+        const filename = url.searchParams.get('filename') || 'import.xml';
+        const dir = path.join(process.cwd(), '1c_uploads');
+        const filePath = path.join(dir, filename);
+
+        console.log(`[GET import] filename=${filename}`);
+
+        await runImport(filePath);
+        return new NextResponse('success');
     }
 
     return NextResponse.json({ error: 'not allowed' }, { status: 403 });
@@ -76,6 +92,9 @@ export async function POST(req: NextRequest) {
     const filename = url.searchParams.get('filename') || 'import.xml';
 
     const dir = path.join(process.cwd(), '1c_uploads');
+
+    console.log('POST mode = ' + mode + ' filename=' + path.join(dir, filename));
+
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }
@@ -83,6 +102,7 @@ export async function POST(req: NextRequest) {
     const filePath = path.join(dir, filename);
 
     if (mode === 'file') {
+        console.log('[file headers]', JSON.stringify(Object.fromEntries(req.headers.entries())));
         console.log('file chunk, size will be:', req.headers.get('content-length'));
 
         const writeStream = createWriteStream(filePath, {
@@ -91,11 +111,10 @@ export async function POST(req: NextRequest) {
         await pipeline(req.body as unknown as Readable, writeStream);
 
         return new NextResponse('success');
-    }  
+    }
 
     if (mode === 'import') {
         await runImport(path.join(dir, filename));
-
         return new NextResponse('success');
     }
 
@@ -103,12 +122,30 @@ export async function POST(req: NextRequest) {
 }
 
 async function runImport(filePath: string) {
-    const xml = fs.readFileSync(filePath, 'utf8');
-    if (!xml || xml.length < 10) throw new Error('empty xml');
+    console.log(`[import] start, file=${filePath}`);
+    const startTs = Date.now();
 
-    const parsed = parseOffersXml(xml);
-  // удаляем XML сразу после парсинга — больше не нужен
+    const xml = fs.readFileSync(filePath, 'utf8');
+    console.log(`[import] read xml, size=${xml.length} bytes`);
+
+    if (!xml || xml.length < 10) {
+        console.error(`[import] xml is empty or too small (len=${xml.length}), aborting`);
+        throw new Error('empty xml');
+    }
+
+    let parsed: ParsedOffer[];
+    try {
+        parsed = parseOffersXml(xml);
+        console.log(`[import] parsed xml -> ${parsed.length} offers`);
+    } catch (e) {
+        console.error(`[import] failed to parse xml, deleting file`, e);
+        fs.unlinkSync(filePath); // не оставляем битый файл на следующую сессию
+        throw e;
+    }
+
+    // удаляем XML сразу после парсинга — больше не нужен
     fs.unlinkSync(filePath);
+    console.log(`[import] deleted source xml file`);
 
     const basePath = filePath.replace(/\.xml$/i, '');
     const newPath = `${basePath}_new.json`;
@@ -116,34 +153,34 @@ async function runImport(filePath: string) {
     const diffPath = `${basePath}_diff.json`;
 
     writeFileSync(newPath, JSON.stringify(parsed, null, 2), 'utf8');
+    console.log(`[import] wrote new snapshot -> ${newPath}`);
 
     let diff: ChangedParsedOffers[] = [];
 
     if (fs.existsSync(oldPath)) {
+        console.log(`[import] found previous snapshot -> ${oldPath}, computing diff`);
         const oldData = JSON.parse(fs.readFileSync(oldPath, 'utf8'));
-        let changedDetailed = getChangedDetailed(oldData, parsed);
+        console.log(`[import] loaded old snapshot, ${oldData.length} offers`);
+
+        const changedDetailed = getChangedDetailed(oldData, parsed);
+        console.log(`[import] detected ${changedDetailed.length} changed offers`);
+
         diff = await enrichNewProductsDiff(changedDetailed, parsed);
-        writeFileSync(diffPath, JSON.stringify(diff, null, 2), 'utf8');
-        fs.unlinkSync(oldPath);
+        console.log(`[import] enriched diff -> ${diff.length} entries`);
     } else {
+        console.log(`[import] no previous snapshot found, treating all ${parsed.length} offers as new`);
         diff = parsed.map((item) => ({ id: item.id, type: 'new' as ChangedOfferType }));
-        writeFileSync(diffPath, JSON.stringify(diff, null, 2), 'utf8');
     }
 
+    writeFileSync(diffPath, JSON.stringify(diff, null, 2), 'utf8');
+    console.log(`[import] wrote diff -> ${diffPath}`);
+
+    console.log(`[import] syncing ${diff.length} products from diff...`);
     await syncProductsFromDiff(diff);
+    console.log(`[import] sync done`);
 
     fs.renameSync(newPath, oldPath);
+    console.log(`[import] rotated snapshot: ${newPath} -> ${oldPath}`);
+
+    console.log(`[import] finished in ${Date.now() - startTs}ms`);
 }
-
-// пайплан не работает. верно определяет айдишники но не видоизменяет.
-
-// file chunk, size will be: 3581220
-//  POST /api/1c-exchange?mode=file 200 in 349ms
-// === SYNC PRODUCTS START ===
-// ⚠ not found for update: 000009028
-// ⚠ not found for update: 000009077
-// ⚠ not found for update: 000009079
-// ⚠ not found for update: 000009084
-// ⚠ not found for delete: 000009085
-// === SYNC DONE ===
-//  POST /api/1c-exchange?mode=import 200 in 712ms

@@ -32,7 +32,7 @@ export const DEFAULT_PRODUCT_VALUES: ProductFormValues = {
     title: '',
     description: '',
     gallery: [],
-    category: null,
+    category: '',
 };
 
 export interface AuthorProductModalProps {

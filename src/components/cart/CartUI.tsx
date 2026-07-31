@@ -33,15 +33,19 @@ export default function CartUI({ isUserAuthorized }: ICartUIProps) {
         return items.map((item) => (isProductData(item.product) ? item.product.id : item.product));
     }, [items]);
 
-    const { data: products, isLoading, isError, error, dataUpdatedAt } = useProductsByIds(productsIds);
+    const { data: products, isLoading, isError, error, dataUpdatedAt, invalidIds } = useProductsByIds(productsIds);
 
     useEffect(() => {
         if (isLoading || !products) return;
-        if (products.length < productsIds.length) return; 
+        if (products.length < productsIds.length) return;
 
         const stockMap = Object.fromEntries(products.map((p) => [p.id, p.quantity ?? 0]));
         syncWithStock(stockMap);
     }, [dataUpdatedAt]);
+
+    if (invalidIds && invalidIds.length > 0) {
+        invalidIds.forEach((id) => removeItem(id));
+    }
 
     if (isLoading) return <CartLoader />;
 

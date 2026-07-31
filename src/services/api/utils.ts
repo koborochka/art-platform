@@ -28,11 +28,22 @@ export function toQueryParams(params: ProductsQueryParams): QueryParams {
     if (authorId) {
         where.author = { equals: authorId };
     }
+
+    const finalWhere = {
+        and: [
+            ...(Object.keys(where).length > 0 ? [where] : []),
+            { price: { not_equals: 0 } },
+            { price: { exists: true } },
+            { quantity: { not_equals: 0 } },
+            { quantity: { exists: true } },
+        ],
+    };
+
     return {
         ...(page ? { page: Number(page) } : { page: 1 }),
         ...(limit ? { limit } : {}),
         sort,
-        ...(Object.keys(where).length > 0 ? { where } : {}),
+        where: finalWhere,
         // depth: 1,
     };
 }

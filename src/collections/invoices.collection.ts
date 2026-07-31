@@ -1,6 +1,7 @@
 import { type CollectionConfig } from 'payload';
 
 import { createConsignmentReceipt1C } from '@/server-actions/createConsignmentReceipt';
+import { createRevaluation1C } from '@/server-actions/createRevaluation';
 import { COLLECTION_SLUGS } from '@/shared/constants/constants';
 import { isProductData } from '@/shared/guards/product.guard';
 import { INVOICE_ITEM_CONDITION } from '@/shared/types/invoice.interface';
@@ -121,31 +122,69 @@ export const InvoicesCollection: CollectionConfig = {
                 // Обработка после подтверждения накладной
                 // количество обновляется со следующей выгрузкой
                 if (isUpdateOperation(operation) && doc.isConfirmed && !previousDoc.isConfirmed) {
-                    const receiptItems = await Promise.all(
-                        doc.items.map(async (item: (typeof doc.items)[number]) => {
-                            const productId = isProductData(item.product) ? item.product.id : item.product;
+                    const authorId = typeof doc.author === 'object' ? doc.author.id : doc.author;
 
-                            const product = await req.payload.findByID({
-                                collection: COLLECTION_SLUGS.PRODUCTS,
-                                id: productId,
-                                req,
-                            });
+                    const resolveProduct = async (item: (typeof doc.items)[number]) => {
+                        const productId = isProductData(item.product) ? item.product.id : item.product;
 
-                            return {
-                                article1C: product.article1C,
-                                quantity: item.quantity,
-                                price: item.price,
-                            };
-                        }),
+                        return req.payload.findByID({
+                            collection: COLLECTION_SLUGS.PRODUCTS,
+                            id: productId,
+                            req,
+                        });
+                    };
+
+                    const newItems = doc.items.filter(
+                        (item: (typeof doc.items)[number]) => item.condition === INVOICE_ITEM_CONDITION.NEW,
                     );
 
-                    const result = await createConsignmentReceipt1C({
-                        authorId: typeof doc.author === 'object' ? doc.author.id : doc.author,
-                        items: receiptItems,
-                    });
+                    const revaluationItems = doc.items.filter(
+                        (item: (typeof doc.items)[number]) =>
+                            item.condition === INVOICE_ITEM_CONDITION.REVALUATION,
+                    );
 
-                    if (!result.success) {
-                        throw new Error(result.error ?? 'Не удалось создать поступление в 1С');
+                    if (newItems.length) {
+                        const receiptItems = await Promise.all(
+                            newItems.map(async (item: (typeof doc.items)[number]) => {
+                                const product = await resolveProduct(item);
+
+                                return {
+                                    article1C: product.article1C,
+                                    quantity: item.quantity,
+                                    price: item.price,
+                                };
+                            }),
+                        );
+
+                        const result = await createConsignmentReceipt1C({
+                            authorId,
+                            items: receiptItems,
+                        });
+
+                        if (!result.success) {
+                            throw new Error(result.error ?? 'Не удалось создать поступление в 1С');
+                        }
+                    }
+
+                    if (revaluationItems.length) {
+                        const revaluationPayload = await Promise.all(
+                            revaluationItems.map(async (item: (typeof doc.items)[number]) => {
+                                const product = await resolveProduct(item);
+
+                                return {
+                                    article1C: product.article1C,
+                                    newPrice: item.price,
+                                };
+                            }),
+                        );
+
+                        const result = await createRevaluation1C({
+                            items: revaluationPayload,
+                        });
+
+                        if (!result.success) {
+                            throw new Error(result.error ?? 'Не удалось создать переоценку в 1С');
+                        }
                     }
                 }
                 return doc;

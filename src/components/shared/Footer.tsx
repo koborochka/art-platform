@@ -90,7 +90,7 @@ export default function Footer() {
                         <div className="flex items-center gap-5">
                             {/* TODO: Добавить ссылки */}
                             <Link
-                                href="#"
+                                href="https://vk.com/minto_ekb"
                                 aria-label="ВКонтакте"
                                 className="text-my-secondary hover:text-my-accent transition-colors cursor-pointer"
                             >
@@ -117,7 +117,7 @@ export default function Footer() {
                 {/* Копирайт */}
                 <p className="text-sm text-my-disabled">
                     © МИНТО 2026 Все права защищены
-                    <span style={{ fontSize: '6px', marginLeft: '16px' }}>v 1.0.11</span>
+                    <span style={{ fontSize: '6px', marginLeft: '16px' }}>v 1.1.8</span>
                 </p>
             </div>
         </footer>
