@@ -265,6 +265,16 @@ export const OrdersCollection: CollectionConfig = {
                 },
             },
         },
+        {
+            name: 'saleDocumentNumber',
+            type: 'text',
+            label: 'Номер продажи в 1С',
+            admin: {
+                readOnly: true,
+                position: 'sidebar',
+                description: 'Заполняется автоматически после успешного проведения продажи в 1С',
+            },
+        },
     ],
 
     access: {

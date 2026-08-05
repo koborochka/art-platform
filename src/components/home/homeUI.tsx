@@ -16,7 +16,17 @@ import { Skeleton } from '../ui/skeleton';
 import HomeSlider from './HomeSlider';
 
 export default function HomeUI() {
-    const { data: products } = useFetchProducts({ limit: 4 });
+    const { data: products } = useFetchProducts({
+        limit: 4,
+        where: {
+            and: [
+                { price: { not_equals: 0 } },
+                { price: { exists: true } },
+                { quantity: { not_equals: 0 } },
+                { quantity: { exists: true } },
+            ],
+        },
+    });
     const { data: authors } = useFetchAuthors({ limit: 4 });
     const { data: slides, isLoading: isSliderLoading } = useFetchHomeSlider();
 
