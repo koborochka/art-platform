@@ -10,6 +10,8 @@ import { useUpdateQueryParams } from '@/shared/hooks/useUpdateQueryParams';
 import type { AuthorsQueryParams } from '@/shared/types/query-params.type';
 import { getPageNumbers } from '@/shared/utils/getPageNumbers';
 
+import { ProductsLoader } from '../shared/Skeleton';
+
 import AuthorsFiltersBar from './AuthorFiltersBar';
 
 export default function AuthorsUI({ initialParams }: { initialParams: AuthorsQueryParams }) {
@@ -25,7 +27,7 @@ export default function AuthorsUI({ initialParams }: { initialParams: AuthorsQue
         return <div>Error: {error.message}</div>;
     }
     if (isFetching) {
-        return <div>Loading...</div>;
+        return <ProductsLoader showHeader={true} productsCount={24} columnsCount={6} />;
     }
     if (!authors) {
         return <div>Products not found</div>;

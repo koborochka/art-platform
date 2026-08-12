@@ -4,6 +4,7 @@ export type ParsedOffer = {
     id: string;
     price: number;
     stock: number;
+    title: string;
 };
 
 export type ChangedOfferType = 'price' | 'stock' | 'new' | 'deleted';
@@ -12,12 +13,14 @@ export type ChangedParsedOffers = {
     id: string;
     type: ChangedOfferType;
     newValue?: number;
+    title?: string;
 };
 
 export function getChangedDetailed(prev: ParsedOffer[], next: ParsedOffer[]): ChangedParsedOffers[] {
     const prevMap = new Map<string, ParsedOffer>();
     const nextMap = new Map<string, ParsedOffer>();
-
+ //   console.log("prevMap : "+ prevMap)
+  //  console.log("nextMap : "+ nextMap)
     for (const item of prev) {
         prevMap.set(String(item.id), item);
     }
@@ -34,7 +37,7 @@ export function getChangedDetailed(prev: ParsedOffer[], next: ParsedOffer[]): Ch
 
         // новый товар
         if (!prevItem) {
-            changes.push({ id, type: 'new' });
+            changes.push({ id, type: 'new', title: nextItem.title });
             continue;
         }
 
@@ -66,6 +69,7 @@ type RawPrice = {
 
 type RawOffer = {
     Артикул?: string | number;
+    Наименование?: string;
     Количество?: string | number;
     Цены?: {
         Цена?: RawPrice | RawPrice[];
@@ -115,6 +119,7 @@ export function parseOffersXml(xmlRaw: string): ParsedOffer[] {
 
         return {
             id: String(offer.Артикул ?? ''),
+            title: String(offer.Наименование ?? ''),
             price: Number(priceVal ?? 0),
             stock: Number(offer.Количество ?? 0),
         };

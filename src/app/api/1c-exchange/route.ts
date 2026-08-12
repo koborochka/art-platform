@@ -169,7 +169,11 @@ async function runImport(filePath: string) {
         console.log(`[import] enriched diff -> ${diff.length} entries`);
     } else {
         console.log(`[import] no previous snapshot found, treating all ${parsed.length} offers as new`);
-        diff = parsed.map((item) => ({ id: item.id, type: 'new' as ChangedOfferType }));
+        diff = parsed.map((item) => ({
+            id: item.id,
+            type: 'new' as ChangedOfferType,
+            title: item.title,
+        }));
     }
 
     writeFileSync(diffPath, JSON.stringify(diff, null, 2), 'utf8');

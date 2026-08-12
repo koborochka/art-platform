@@ -12,6 +12,7 @@ import type { AuthorQueryParams, ProductsQueryParams } from '@/shared/types/quer
 
 import { isImageData } from '../../shared/guards/image.guard';
 import ProductsUI from '../products/ProductsUI';
+import { HomeLoader } from '../shared/Skeleton';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 
@@ -29,7 +30,7 @@ export default function AuthorUI({
         return <div>Error: {error.message}</div>;
     }
     if (isFetching) {
-        return <div>Loading...</div>;
+        return <HomeLoader />;
     }
     if (!data) {
         notFound();

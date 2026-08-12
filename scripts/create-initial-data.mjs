@@ -108,6 +108,7 @@ const CONFIG = {
         password: process.env.ADMIN_PASSWORD,
     },
     credsFile: path.join(__dirname, process.env.CREDS_LOG_PATH),
+    productsLogFile: path.join(__dirname, 'products-import-log.txt'),
     fallbackUser: {
         fullName: process.env.FALLBACK_USER_NAME,
         email: process.env.FALLBACK_USER_EMAIL,
@@ -148,6 +149,23 @@ const categoryCache = new Map();
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const generatePassword = () => Math.random().toString(36).slice(-10) + 'A1!';
+
+const STATUS_LABELS = {
+    created: 'УСПЕШНО СОЗДАН',
+    existing: 'УЖЕ СУЩЕСТВУЕТ',
+    skipped: 'ПРОПУЩЕН',
+    failed: 'ОШИБКА',
+};
+
+function logProductLine({ authorName, title, article, quantity, status, details = '' }) {
+    const statusLabel = STATUS_LABELS[status] || status.toUpperCase();
+    const line =
+        `[${new Date().toLocaleString()}] Автор: ${authorName || '—'} | ` +
+        `Товар: ${title || '—'} | Артикул: ${article || '—'} | Кол-во: ${quantity ?? '—'} | ` +
+        `Статус: ${statusLabel}${details ? ` (${details})` : ''}\n`;
+
+    appendFileSync(CONFIG.productsLogFile, line);
+}
 
 async function request(method, path, body = null, retries = 3) {
     const headers = { 'Content-Type': 'application/json' };
@@ -241,16 +259,19 @@ async function getCategoryId(label) {
     return null;
 }
 
-async function createProduct(row, authorId) {
+async function createProduct(row, authorId, authorName) {
     const nomenclatureLink = row[9]?.toString() || '';
-    const retailPrice = parseFloat(row[5]) || 0;
+    const retailPrice = parseFloat(row[6]) || 0;
     const nomenclatureCode = row[8]?.toString() || '';
     const stockBalance = parseInt(row[10]) || 0;
     const parts = nomenclatureLink.split(',').map((s) => s?.trim());
     const title = parts[0] || 'Без названия';
     const categoryLabel = parts[parts.length - 1];
 
+    const logBase = { authorName, title, article: nomenclatureCode, quantity: stockBalance };
+
     if (categoryLabel === 'Услуги') {
+        logProductLine({ ...logBase, status: 'skipped', details: 'категория "Услуги"' });
         return 'skipped';
     }
 
@@ -271,6 +292,7 @@ async function createProduct(row, authorId) {
             `/api/products?where[article1C][equals]=${encodeURIComponent(nomenclatureCode)}`,
         );
         if (existing.status === 200 && existing.data.docs?.length > 0) {
+            logProductLine({ ...logBase, status: 'existing' });
             return 'existing';
         }
     }
@@ -279,10 +301,13 @@ async function createProduct(row, authorId) {
     //await sleep(100); // задержка между запросами
     if (res.status === 201) {
         console.log(`${CONFIG.colors.green}  ✔ Товар: ${title}${CONFIG.colors.reset}`);
+        logProductLine({ ...logBase, status: 'created' });
         return 'created';
     }
 
+    const errorMsg = res.data?.errors?.[0]?.message || res.data?.error || `HTTP ${res.status}`;
     console.log(`${CONFIG.colors.red}  ✘ Ошибка товара "${title}": ${res.status}${CONFIG.colors.reset}`);
+    logProductLine({ ...logBase, status: 'failed', details: errorMsg });
 
     return 'failed';
 }
@@ -300,8 +325,9 @@ async function runSeed() {
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
 
     writeFileSync(CONFIG.credsFile, `Лог импорта от ${new Date().toLocaleString()}\n\n`);
+    writeFileSync(CONFIG.productsLogFile, `Лог импорта товаров от ${new Date().toLocaleString()}\n\n`);
 
-    for (let i = 4; i < data.length; i++) {
+    for (let i = 0; i < data.length; i++) {
         const row = data[i];
         if (!row || !row[7]) continue;
 
@@ -315,7 +341,7 @@ async function runSeed() {
         }
 
         if (authorCache.has(fullName)) {
-            const result = await createProduct(row, authorCache.get(fullName));
+            const result = await createProduct(row, authorCache.get(fullName), fullName);
 
             if (result === 'created') stats.products.created++;
             else if (result === 'failed') stats.products.failed++;
@@ -331,7 +357,7 @@ async function runSeed() {
             authorCache.set(fullName, authorId);
             console.log(`${CONFIG.colors.yellow}Автор уже существует: ${fullName}${CONFIG.colors.reset}`);
             stats.authors.existing++;
-            const result = await createProduct(row, authorId);
+            const result = await createProduct(row, authorId, fullName);
 
             if (result === 'created') stats.products.created++;
             else if (result === 'failed') stats.products.failed++;
@@ -393,7 +419,7 @@ async function runSeed() {
                     authorCache.set(fullName, authorId);
                     console.log(`${CONFIG.colors.green}[~] Данные автора заполнены: ${fullName}${CONFIG.colors.reset}`);
                     stats.authors.updated++;
-                    const result = await createProduct(row, authorId);
+                    const result = await createProduct(row, authorId, fullName);
 
                     if (result === 'created') stats.products.created++;
                     else if (result === 'failed') stats.products.failed++;
@@ -417,7 +443,7 @@ async function runSeed() {
                     authorCache.set(fullName, authorId);
                     console.log(`${CONFIG.colors.cyan}[+] Автор создан вручную: ${fullName}${CONFIG.colors.reset}`);
                     stats.authors.created++;
-                    const result = await createProduct(row, authorId);
+                    const result = await createProduct(row, authorId, fullName);
 
                     if (result === 'created') stats.products.created++;
                     else if (result === 'failed') stats.products.failed++;
@@ -446,6 +472,8 @@ async function runSeed() {
     console.log(`  Пропущено:      ${CONFIG.colors.yellow}${stats.products.skipped}${CONFIG.colors.reset}`);
     console.log(`  Уже существовало:${CONFIG.colors.yellow}${stats.products.existing}${CONFIG.colors.reset}`);
     console.log(`  Ошибок:         ${CONFIG.colors.red}${stats.products.failed}${CONFIG.colors.reset}`);
+
+    console.log(`\n${CONFIG.colors.cyan}Подробный лог по товарам: ${CONFIG.productsLogFile}${CONFIG.colors.reset}`);
 }
 
 async function main() {

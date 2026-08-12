@@ -16,6 +16,7 @@ import { useUpdateQueryParams } from '@/shared/hooks/useUpdateQueryParams';
 import type { Media } from '@/shared/types/payload-types';
 import type { ProductQueryParams, ProductsQueryParams } from '@/shared/types/query-params.type';
 
+import { HomeLoader } from '../shared/Skeleton';
 import CounterButton, { Button } from '../ui/button';
 
 import AuthorProductsSection from './AuthorProductsSection';
@@ -28,7 +29,7 @@ export default function ProductUI({ initialParams }: { initialParams: ProductQue
     const updateQueryParams = useUpdateQueryParams<ProductsQueryParams>();
 
     if (isError) return <div>Error: {error.message}</div>;
-    if (isFetching) return <div>Loading...</div>;
+    if (isFetching) return <HomeLoader />;
     if (!product) notFound();
 
     const { id, title, description, gallery, price, author, quantity } = product;

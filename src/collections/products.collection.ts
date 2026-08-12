@@ -149,6 +149,7 @@ export const ProductsCollection: CollectionConfig = {
             name: 'article1C',
             type: 'text',
             label: 'Артикул 1С',
+            unique: true,
             admin: {
                 readOnly: true,
             },

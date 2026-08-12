@@ -9,6 +9,7 @@ import { useFetchCategories } from '@/shared/hooks/useFetchData';
 import { Checkbox } from '../ui/checkbox';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { ScrollArea } from '../ui/scroll-area';
+import { Spinner } from '../ui/spinner';
 
 import { ResponsiveFilterShell } from './ResponsiveFilter';
 
@@ -56,7 +57,7 @@ export default function CategoryFilter({ category, onCategoryChange }: CategoryF
                     <CommandGroup>
                         <ScrollArea className="h-46 w-full">
                             {isError && error && <span>{error.message}</span>}
-                            {isFetching && <span className="w-full mx-auto">Loading...</span>}
+                            {isFetching && <Spinner />}
                             {categories.map((category) => {
                                 const isChecked = newCategories.includes(category.value);
                                 const toggle = () => {
