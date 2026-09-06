@@ -2,29 +2,57 @@
 
 import * as React from 'react';
 
-import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
-import { CheckIcon } from 'lucide-react';
+import { Square, SquareCheck } from 'lucide-react';
 
-import { cn } from '@/lib/utils/tailwind';
+import { cn } from '@/shared/utils/tailwind';
 
-function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
-    return (
-        <CheckboxPrimitive.Root
-            data-slot="checkbox"
-            className={cn(
-                'peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
-                className,
-            )}
-            {...props}
-        >
-            <CheckboxPrimitive.Indicator
-                data-slot="checkbox-indicator"
-                className="flex items-center justify-center text-current transition-none"
-            >
-                <CheckIcon className="size-3.5" />
-            </CheckboxPrimitive.Indicator>
-        </CheckboxPrimitive.Root>
-    );
+interface CheckboxProps {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+    disabled?: boolean;
+    className?: string;
 }
+
+const Checkbox = React.forwardRef<HTMLDivElement, CheckboxProps>(
+    ({ checked = false, onCheckedChange, disabled = false, className }, ref) => {
+        const handleToggle = (e: React.MouseEvent | React.KeyboardEvent) => {
+            if (disabled) return;
+            e.preventDefault();
+            e.stopPropagation();
+            onCheckedChange?.(!checked);
+        };
+
+        return (
+            <div
+                ref={ref}
+                role="checkbox"
+                aria-checked={checked}
+                aria-disabled={disabled}
+                tabIndex={disabled ? -1 : 0}
+                onClick={handleToggle}
+                className={cn(
+                    // Базовые стили контейнера
+                    'relative size-6 cursor-pointer outline-none transition-all',
+                    'focus-visible:ring-2 focus-visible:ring-my-accent/50',
+                    disabled && 'cursor-not-allowed opacity-50',
+                    className,
+                )}
+            >
+                <input type="checkbox" className="sr-only" checked={checked} readOnly disabled={disabled} />
+
+                {checked ? (
+                    <SquareCheck size={24} className="absolute inset-0 text-my-accent" />
+                ) : (
+                    <Square
+                        size={24}
+                        className={cn('text-my-secondary absolute inset-0 transition-colors duration-200')}
+                    />
+                )}
+            </div>
+        );
+    },
+);
+
+Checkbox.displayName = 'Checkbox';
 
 export { Checkbox };

@@ -1,24 +1,26 @@
 'use server';
 
-import config from '@payload-config';
 import { getPayload } from 'payload';
 import type z from 'zod';
 
-import type { authorFormSchema } from '@/app/(public)/authors/AuthorForm';
+import config from '@/payload.config';
+import { authorFullSchema } from '@/shared/validations/schemas';
 
-export async function postForm(data: z.infer<typeof authorFormSchema>) {
+export async function postForm(data: z.infer<typeof authorFullSchema>) {
     try {
-        console.log('Анкета сохранена:', data);
-
         const payload = await getPayload({ config });
+
         await payload.create({
             collection: 'forms',
-            data: { content: data.content },
+            data: {
+                ...data,
+                needRail: data.needRail === 'yes',
+            },
         });
 
-        return { success: true, message: 'Form submitted successfully' };
+        return { success: true };
     } catch (error) {
-        console.error('Form submission error:', error);
+        console.error(error);
         return { success: false, error: 'Failed to submit form' };
     }
 }

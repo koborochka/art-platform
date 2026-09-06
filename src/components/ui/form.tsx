@@ -15,7 +15,7 @@ import {
 } from 'react-hook-form';
 
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils/tailwind';
+import { cn } from '@/shared/utils/tailwind';
 
 const Form = FormProvider;
 
@@ -75,7 +75,7 @@ function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
 
     return (
         <FormItemContext.Provider value={{ id }}>
-            <div data-slot="form-item" className={cn('grid gap-2', className)} {...props} />
+            <div data-slot="form-item" className={cn('grid gap-1.5 md:gap-4', className)} {...props} />
         </FormItemContext.Provider>
     );
 }
@@ -87,7 +87,7 @@ function FormLabel({ className, ...props }: React.ComponentProps<typeof LabelPri
         <Label
             data-slot="form-label"
             data-error={!!error}
-            className={cn('data-[error=true]:text-destructive', className)}
+            className={cn(' text-[#4B5563] data-[error=true]:text-destructive ', className)}
             htmlFor={formItemId}
             {...props}
         />

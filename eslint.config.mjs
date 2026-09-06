@@ -2,40 +2,52 @@ import js from '@eslint/js';
 import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import prettier from 'eslint-config-prettier';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { FlatCompat } from '@eslint/eslintrc';
-
 import eslintPluginImport from 'eslint-plugin-import';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-    baseDirectory: __dirname,
-});
+import nextPlugin from '@next/eslint-plugin-next';
+import globals from 'globals';
 
 const eslintConfig = [
-    ...compat.extends('next/core-web-vitals', 'next/typescript'),
     {
-        ignores: ['dist', 'node_modules/**', '.next/**', 'out/**', 'build/**', 'next-env.d.ts'],
+        ignores: ['dist', 'node_modules/**', '.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'src/app/(payload)/**'],
     },
     {
         files: ['**/*.{ts,tsx}'],
         languageOptions: {
             parser: tsParser,
-            parserOptions: { project: './tsconfig.json' },
+            parserOptions: {
+                project: './tsconfig.json',
+                ecmaVersion: 'latest',
+                sourceType: 'module',
+                ecmaFeatures: {
+                    jsx: true,
+                },
+            },
+            globals: {
+                ...globals.browser,
+                ...globals.node,
+                ...globals.es2020,
+            },
         },
         plugins: {
             '@typescript-eslint': ts,
             import: eslintPluginImport,
             'simple-import-sort': simpleImportSort,
+            '@next/next': nextPlugin,
         },
         rules: {
             ...js.configs.recommended.rules,
             ...ts.configs.recommended.rules,
-            '@typescript-eslint/no-unused-vars': ['warn'],
+            ...nextPlugin.configs.recommended.rules,
+            ...nextPlugin.configs['core-web-vitals'].rules,
+
+            '@typescript-eslint/no-unused-vars': [
+                'warn',
+                {
+                    varsIgnorePattern: '^_',
+                    argsIgnorePattern: '^_',
+                },
+            ],
             '@typescript-eslint/explicit-module-boundary-types': 'off',
 
             'simple-import-sort/imports': [
@@ -65,6 +77,11 @@ const eslintConfig = [
             'import/first': 'error',
             'import/newline-after-import': 'error',
             'import/no-duplicates': 'error',
+        },
+        settings: {
+            react: {
+                version: 'detect',
+            },
         },
     },
     prettier,

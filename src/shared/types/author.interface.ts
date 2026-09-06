@@ -1,31 +1,22 @@
-import type { AUTHORS_SORT_OPTIONS } from '@/app/(public)/authors/constants';
+import type { Author, Invoice, Product } from './payload-types';
 
-import type { ProductCategory } from './product.interface';
+export type IAuthorUpdateInput = Omit<
+    Author,
+    'id' | 'slug' | 'user' | 'products_count' | 'product_categories' | 'createdAt' | 'updatedAt'
+>;
+export type IAuthorProductCategory = Exclude<Author['product_categories'], undefined | null>[number];
+export type IAuthorAvatar = IAuthorUpdateInput['avatar'];
+export type IAuthorCover = IAuthorUpdateInput['cover'];
 
-export interface IAuthor {
-    id: string;
+export interface AuthorProfileFormValues {
     name: string;
-    slug: string;
-    bio?: string;
-    productsCount: number; // Общее кличество товаров автора (вычисляемое)
-    productCategories: ProductCategory[]; // Категории продуктов, которые автор толкает (вычисляемое), создаёт новую таблицу
-    avatar?: string;
-    user?: string;
+    bio: string;
+    avatar?: IAuthorAvatar;
+    cover?: IAuthorCover;
 }
 
-export interface IAuthorsUIProps {
-    authors: IAuthor[];
+export interface AuthorProfileUIProps {
+    authorData: Author;
+    products: Product[];
+    latestInvoice: Invoice | null;
 }
-
-export interface IAuthorsFilters {
-    productCategories: ProductCategory[];
-}
-
-export interface IAuthorFiltersBarProps {
-    filters: IAuthorsFilters;
-    sortBy: AuthorsSortOption;
-    onFilterChange: (filters: IAuthorsFilters) => void;
-    onSortChange: (value: AuthorsSortOption) => void;
-}
-
-export type AuthorsSortOption = (typeof AUTHORS_SORT_OPTIONS)[number]['value'] | null;

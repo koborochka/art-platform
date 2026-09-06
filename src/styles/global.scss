@@ -1,0 +1,22 @@
+@use 'mixins' as *;
+
+body {
+    font-family: 'Wix Madefor Display', sans-serif;
+    font-weight: 450;
+    color: var(--color-zinc-900);
+}
+
+.container {
+    @include min-max(0px, 100%);
+    // Элемент растягивается на всю ширину родителя, но не становится уже 0px
+}
+
+.wrap {
+    @include min-max(220px, 1296px);
+    // Элемент ограничен шириной 1296px, даже если экран больше
+}
+
+// // костыль для отображения слайдов при большой ширине по центу на странице about
+// .slick-slide + div {
+//     display: flex;
+// }

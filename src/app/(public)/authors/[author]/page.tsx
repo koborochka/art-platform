@@ -1,57 +1,65 @@
+import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { PayloadService } from '@/services/api/payload-service';
+import AuthorUI from '@/components/author/AuthorUI';
+import JsonLd from '@/components/seo/JsonLd';
+import { payloadLocalService } from '@/services/api/server/payload-local.service';
+import type { AuthorQueryParams, ProductsQueryParams } from '@/shared/types/query-params.type';
+import { getQueryClient } from '@/shared/utils/get-query-client';
+import { getAuthorQueryOptions } from '@/shared/utils/getDataQueryOptions';
+import { authorJsonLd, breadcrumbJsonLd } from '@/shared/utils/jsonld';
+import { buildMetadata, mediaToOgImages } from '@/shared/utils/seo';
 
-type Params = { author: string }; // authorSlug
-
-export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<AuthorQueryParams> }): Promise<Metadata> {
     const { author } = await params;
 
-    const payloadService = new PayloadService();
-    const authorData = await payloadService.getAuthorBySlug(author);
+    const data = await payloadLocalService.getAuthorBySlug(author);
 
-    if (!authorData) {
-        return { title: 'Автор не найден' };
+    if (!data) {
+        return buildMetadata({ title: 'Автор не найден', noindex: true });
     }
 
-    return {
-        title: authorData.name,
-    };
+    return buildMetadata({
+        title: data.name ?? data.fullName ?? 'Автор',
+        description:
+            data.bio?.slice(0, 160) ??
+            `${data.name ?? 'Автор'} — мастер магазина Минто. Уникальные изделия ручной работы.`,
+        path: `/authors/${data.slug}`,
+        images: mediaToOgImages(data.avatar ?? data.cover, data.name ?? 'Автор'),
+        type: 'profile',
+    });
 }
 
-export default async function AuthorPage({ params }: { params: Promise<Params> }) {
-    const { author } = await params;
+export default async function AuthorPage({
+    params,
+    searchParams,
+}: {
+    params: Promise<AuthorQueryParams>;
+    searchParams: Promise<ProductsQueryParams>;
+}) {
+    const authorParams = await params;
+    const authorQueryParams = await searchParams;
 
-    const payloadService = new PayloadService();
-    const authorData = await payloadService.getAuthorBySlug(author);
+    const author = await payloadLocalService.getAuthorBySlug(authorParams.author);
+    if (!author) notFound();
 
-    if (!authorData) {
-        notFound();
-    }
-
-    const { id, name, slug, bio, productsCount, productCategories, avatar } = authorData;
+    const queryClient = getQueryClient();
+    await queryClient.prefetchQuery(getAuthorQueryOptions({ slug: authorParams.author }));
 
     return (
-        <Card className="max-w-[800px] mx-auto mt-8">
-            <CardHeader>
-                <div className="flex items-center gap-4">
-                    {avatar && <Image src={avatar} alt={name} width={48} height={48} />}
-                    <div>
-                        <h2 className="text-lg font-semibold">{name}</h2>
-                        <p className="text-sm text-gray-500">Id: {id}</p>
-                        <p className="text-sm text-gray-500">Slug: {slug}</p>
-                    </div>
-                </div>
-            </CardHeader>
-
-            <CardContent className="flex flex-col gap-2">
-                {bio && <p>{bio.slice(0, 100)}</p>}
-                <span>Общее количество товаров: {productsCount}</span>
-                <span>Категории товаров: {productCategories?.join(', ') || '—'}</span>
-            </CardContent>
-        </Card>
+        <HydrationBoundary state={dehydrate(queryClient)}>
+            <JsonLd
+                data={[
+                    authorJsonLd(author),
+                    breadcrumbJsonLd([
+                        { name: 'Главная', path: '/' },
+                        { name: 'Авторы', path: '/authors' },
+                        { name: author.name ?? 'Автор', path: `/authors/${author.slug}` },
+                    ]),
+                ]}
+            />
+            <AuthorUI initialParams={authorParams} searchParams={authorQueryParams} />
+        </HydrationBoundary>
     );
 }

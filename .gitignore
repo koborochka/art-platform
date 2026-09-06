@@ -29,10 +29,11 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env.local
+.env.production
 
-# vercel
-.vercel
+# tar
+*.tar.gz
 
 # typescript
 *.tsbuildinfo
@@ -40,3 +41,14 @@ next-env.d.ts
 
 # database
 docker-compose.yml
+
+#media
+
+media
+
+#1c
+1c_uploads
+creds.txt
+
+#scripts
+test-*.mjs

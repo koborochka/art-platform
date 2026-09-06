@@ -1,23 +1,18 @@
-import { PayloadService } from '@/services/api/payload-service';
-import { PRODUCTS } from '@/shared/data/products.data';
+import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 
-import ProductCard from '../../../components/ProductCard';
+import HomeUI from '@/components/home/homeUI';
+import { getQueryClient } from '@/shared/utils/get-query-client';
+import { getAuthorsQueryOptions, getProductsQueryOptions } from '@/shared/utils/getDataQueryOptions';
 
 export default async function HomePage() {
-    // TODO: loading и error
-    const payloadService = new PayloadService();
-    const products = await payloadService.getProducts();
+    const queryClient = getQueryClient();
 
-    // TODO: Убрать моки потом
+    await queryClient.prefetchQuery(getProductsQueryOptions({ limit: 4 }));
+    await queryClient.prefetchQuery(getAuthorsQueryOptions({ limit: 4 }));
+
     return (
-        <div className="max-w-6xl mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-6">Home</h1>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {PRODUCTS.map((product) => (
-                    <ProductCard key={product.id} {...product} />
-                ))}
-            </div>
-        </div>
+        <HydrationBoundary state={dehydrate(queryClient)}>
+            <HomeUI />
+        </HydrationBoundary>
     );
 }

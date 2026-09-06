@@ -1,0 +1,15 @@
+import * as migration_20260601_154900_auto_20260601_204854 from './20260601_154900_auto_20260601_204854';
+import * as migration_20260614_051802_auto_20260614_101748 from './20260614_051802_auto_20260614_101748';
+
+export const migrations = [
+  {
+    up: migration_20260601_154900_auto_20260601_204854.up,
+    down: migration_20260601_154900_auto_20260601_204854.down,
+    name: '20260601_154900_auto_20260601_204854',
+  },
+  {
+    up: migration_20260614_051802_auto_20260614_101748.up,
+    down: migration_20260614_051802_auto_20260614_101748.down,
+    name: '20260614_051802_auto_20260614_101748'
+  },
+];

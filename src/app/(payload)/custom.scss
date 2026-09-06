@@ -1,0 +1,90 @@
+// Базовая стилизация инпутов
+input:disabled,
+textarea:disabled,
+select:disabled,
+.rs__control--is-disabled {
+  background-color: #f4f4f4 !important; 
+  border: 1px dashed #999 !important;   
+  color: #111 !important;              
+  opacity: 1 !important;                 
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  -webkit-text-fill-color: #111 !important; 
+}
+
+// Скрываем крестики, стрелки выпадающих списков и иконки календаря
+.field-type:has(input:disabled) .clear-indicator,
+.field-type:has(input:disabled) .date-time-picker__icon-wrap,
+.field-type:has(input:disabled) .date-time-picker__clear-button,
+.rs__control--is-disabled .rs__indicators,
+.rs__control--is-disabled .relationship--single-value__drawer-toggler {
+  display: none !important;
+}
+
+// React select (Relationship, Select)
+.rs__control--is-disabled {
+  min-height: 38px !important; 
+}
+
+.rs__single-value--is-disabled {
+  color: #111 !important;
+  margin: 0 !important;
+  padding-right: 25px; 
+  opacity: 1 !important;
+}
+
+// Фикс для текста внутри Relationship
+.rs__single-value--is-disabled .relationship--single-value__text {
+  color: #111 !important;
+}
+
+.rs__control--is-disabled .rs__value-container {
+  padding: 0 10px !important; 
+}
+
+// Иконка замка для заблокированных полей
+.field-type:has(input:disabled) .field-type__wrap,
+.field-type:has(textarea:disabled) .field-type__wrap,
+.field-type:has(select:disabled) .field-type__wrap,
+.field-type:has(.rs__control--is-disabled) .field-type__wrap {
+  position: relative !important;
+}
+
+.field-type:has(input:disabled) .field-type__wrap::after,
+.field-type:has(textarea:disabled) .field-type__wrap::after,
+.field-type:has(select:disabled) .field-type__wrap::after,
+.field-type:has(.rs__control--is-disabled) .field-type__wrap::after {
+  content: "🔒";
+  position: absolute;
+  right: 12px;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 10;
+  filter: grayscale(100%);
+}
+
+.field-type:has(input:disabled) .field-type__wrap::after,
+.field-type:has(select:disabled) .field-type__wrap::after,
+.field-type:has(.rs__control--is-disabled) .field-type__wrap::after {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.field-type:has(textarea:disabled) .field-type__wrap::after {
+  top: 15px; /* Отступ сверху, чтобы совпадал с первой строкой текста */
+  transform: none;
+}
+
+input:disabled {
+  padding-right: 35px !important;
+}
+
+.date-time-picker input:disabled {
+  padding-right: 35px !important;
+}
+
+textarea:disabled {
+  padding-right: 35px !important;
+}
